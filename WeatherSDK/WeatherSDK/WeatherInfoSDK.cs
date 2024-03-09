@@ -1,5 +1,7 @@
 ﻿using Newtonsoft.Json;
+using System.Net;
 using WeatherSDK.Data;
+using WeatherSDK.Exceptions;
 
 namespace WeatherSDK
 {
@@ -41,18 +43,31 @@ namespace WeatherSDK
 
                     WeatherApiResponse? weatherData = JsonConvert.DeserializeObject<WeatherApiResponse>(jsonResponse);
 
+                    if (weatherData == null)
+                    {
+                        throw new BaseWeatherSDKException($"Cannot process response data: {jsonResponse}");
+                    }
+
                     return ConvertWeatherResponseToTargetJson(weatherData);
 
                 }
                 else
                 {
+                    switch (response.StatusCode)
+                    {
+                        case HttpStatusCode.Unauthorized:
+                            throw new UnauthorizedExcpetion();
+                        case HttpStatusCode.NotFound:
+                            throw new NotFoundExcpetion();
+                        default:
+                            throw new BaseWeatherSDKException($"Exception: {(int)response.StatusCode} - {response.ReasonPhrase}");
+                    }
                 }
             }
             catch (Exception ex)
             {
-                
+                throw new BaseWeatherSDKException(ex.Message);
             }
-            return "";
         }
 
         private string ConvertWeatherResponseToTargetJson(WeatherApiResponse weatherApiResponse)
