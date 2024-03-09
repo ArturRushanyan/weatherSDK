@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using Newtonsoft.Json;
+using WeatherSDK.Data;
 
 namespace WeatherSDK
 {
@@ -24,6 +25,33 @@ namespace WeatherSDK
             httpClient = new HttpClient();
             this.apiKey = apiKey;
             this.mode = mode;
+        }
+
+        public async Task<string> GetCityWeather(string city)
+        {
+
+            string url = string.Format(apiUrl, city, apiKey);
+            try
+            {
+                HttpResponseMessage response = await httpClient.GetAsync(url);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    string jsonResponse = await response.Content.ReadAsStringAsync();
+
+                    WeatherApiResponse? weatherData = JsonConvert.DeserializeObject<WeatherApiResponse>(jsonResponse);
+
+                    return jsonResponse;
+                }
+                else
+                {
+                }
+            }
+            catch (Exception ex)
+            {
+                
+            }
+            return "";
         }
     }
 }
