@@ -2,6 +2,7 @@
 using System.Net;
 using WeatherSDK.Data;
 using WeatherSDK.Exceptions;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace WeatherSDK
 {
@@ -19,6 +20,7 @@ namespace WeatherSDK
         private readonly string apiUrl = "https://api.openweathermap.org/data/2.5/weather?q={0}&appid={1}";
         private string apiKey;
         private SDKMode mode;
+        private Dictionary<string, CachedWheatherData> weatherCachedData;
 
         public SDKMode Mode => mode;
 
@@ -27,10 +29,20 @@ namespace WeatherSDK
             httpClient = new HttpClient();
             this.apiKey = apiKey;
             this.mode = mode;
+            weatherCachedData = new Dictionary<string, CachedWheatherData>();
         }
 
         public async Task<string> GetCityWeather(string city)
         {
+            CachedWheatherData cachedData;
+
+            if (weatherCachedData.TryGetValue(city, out cachedData))
+            {
+                if (cachedData.IsValid(cacheExpirationTimeInSeconds))
+                {
+                    return SerializeWeatherData(cachedData.Data);
+                }
+            }
 
             string url = string.Format(apiUrl, city, apiKey);
             try
@@ -41,15 +53,30 @@ namespace WeatherSDK
                 {
                     string jsonResponse = await response.Content.ReadAsStringAsync();
 
-                    WeatherApiResponse? weatherData = JsonConvert.DeserializeObject<WeatherApiResponse>(jsonResponse);
+                    WeatherApiResponse? weatherResponse = JsonConvert.DeserializeObject<WeatherApiResponse>(jsonResponse);
 
-                    if (weatherData == null)
+                    if (weatherResponse == null)
                     {
                         throw new BaseWeatherSDKException($"Cannot process response data: {jsonResponse}");
                     }
 
-                    return ConvertWeatherResponseToTargetJson(weatherData);
+                    WeatherData weatherData = ConvertWeatherResponseToTargetJson(weatherResponse);
 
+                    if (cachedData != null)
+                    {
+                        cachedData.LastUpdatedDate = DateTime.UtcNow;
+                        cachedData.Data = weatherData;
+                    }
+                    else
+                    {
+                        if (weatherCachedData.Count >= cacheSize)
+                        {
+                            weatherCachedData.Remove(weatherCachedData.Keys.Last());
+                        }
+                        weatherCachedData.Add(city, new CachedWheatherData(DateTime.UtcNow, weatherData));
+                    }
+
+                    return SerializeWeatherData(weatherData);
                 }
                 else
                 {
@@ -70,7 +97,7 @@ namespace WeatherSDK
             }
         }
 
-        private string ConvertWeatherResponseToTargetJson(WeatherApiResponse weatherApiResponse)
+        private WeatherData ConvertWeatherResponseToTargetJson(WeatherApiResponse weatherApiResponse)
         {
             WeatherData weatherData = new WeatherData
             {
@@ -99,6 +126,11 @@ namespace WeatherSDK
                 name = weatherApiResponse.name
             };
 
+            return weatherData;
+        }
+
+        private string SerializeWeatherData(WeatherData weatherData)
+        { 
             return JsonConvert.SerializeObject(weatherData);
         }
     }
