@@ -8,7 +8,15 @@
     <Copyright>MIT</Copyright>
     <RepositoryUrl>https://github.com/ArturRushanyan/weatherSDK</RepositoryUrl>
     <Version>0.0.1</Version>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\..\README.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
