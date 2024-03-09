@@ -2,7 +2,6 @@
 using System.Net;
 using WeatherSDK.Data;
 using WeatherSDK.Exceptions;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace WeatherSDK
 {
@@ -13,6 +12,9 @@ namespace WeatherSDK
             Polling,
             OnDemend
         }
+
+        private static Task pollingTask;
+        private static Dictionary<string, WeatherInfoSDK> instances = new Dictionary<string, WeatherInfoSDK>();
 
         private readonly int cacheSize = 10;
         private readonly int cacheExpirationTimeInSeconds = 600;
@@ -32,6 +34,30 @@ namespace WeatherSDK
             weatherCachedData = new Dictionary<string, CachedWheatherData>();
         }
 
+        public static WeatherInfoSDK CreateInstance(string apiKey, SDKMode mode = SDKMode.OnDemend)
+        {
+            if (!instances.TryGetValue(apiKey, out var instance))
+            {
+                instance = new WeatherInfoSDK(apiKey, mode);
+                instances.Add(apiKey, instance);
+
+                if (mode == SDKMode.Polling && pollingTask == null)
+                {
+                    RunPollingTask();
+                }
+            }
+
+            return instance;
+        }
+
+        public static void DeleteInstance(WeatherInfoSDK instance)
+        {
+            if (instances.ContainsKey(instance.apiKey))
+            {
+                instances.Remove(instance.apiKey);
+            }
+        }
+
         public async Task<string> GetCityWeather(string city)
         {
             CachedWheatherData cachedData;
@@ -45,6 +71,7 @@ namespace WeatherSDK
             }
 
             string url = string.Format(apiUrl, city, apiKey);
+
             try
             {
                 HttpResponseMessage response = await httpClient.GetAsync(url);
@@ -132,6 +159,31 @@ namespace WeatherSDK
         private string SerializeWeatherData(WeatherData weatherData)
         { 
             return JsonConvert.SerializeObject(weatherData);
+        }
+
+        private static void RunPollingTask()
+        {
+            pollingTask = Task.Run(async () =>
+            {
+                while (true)
+                {
+
+                    await Task.Delay(10000);
+                    List<WeatherInfoSDK> apiKeys = instances.Values.ToList();
+
+                    foreach (WeatherInfoSDK instance in apiKeys)
+                    {
+                        if (instance.Mode == SDKMode.Polling)
+                        {
+                            List<string> cities = instance.weatherCachedData.Keys.ToList();
+                            foreach (string city in cities)
+                            {
+                                await instance.GetCityWeather(city);
+                            }
+                        }
+                    }
+                }
+            });
         }
     }
 }
