@@ -4,6 +4,9 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <Title>SDK to get weather by city name</Title>
+    <Copyright>MIT</Copyright>
+    <RepositoryUrl>https://github.com/ArturRushanyan/weatherSDK</RepositoryUrl>
   </PropertyGroup>
 
   <ItemGroup>
