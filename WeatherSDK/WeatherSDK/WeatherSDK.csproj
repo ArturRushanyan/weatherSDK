@@ -7,7 +7,7 @@
     <Title>SDK to get weather by city name</Title>
     <Copyright>MIT</Copyright>
     <RepositoryUrl>https://github.com/ArturRushanyan/weatherSDK</RepositoryUrl>
-    <Version>0.0.1</Version>
+    <Version>0.0.2</Version>
     <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
 

@@ -10,7 +10,7 @@ The WeatherSDK provides a simple and flexible way to retrieve weather informatio
 - [Installation](#installation)
 - [Usage](#usage)
 - [Exceptions](#exceptions)
-
+- [Upload new version of SDK](#upload__new__version__of__SDK)
 
 ## Features
 1. In ``OnDemend`` mode, the SDK updates weather information only on customer requests (defalut operation mode). In ``Polling`` mode, the SDK requests new weather information for all stored locations.
@@ -131,6 +131,15 @@ catch (BaseWeatherSDKException ex)
     Console.WriteLine($"Error: {ex.Message}");
 }
 ```
+
+## Upload new version of SDK
+
+To upload a new version of a package, please run the ".\push_package_to_nuget.ps1" PowerShell script on a Windows operating system. This script requires the following parameters:
+1. Package name
+2. NuGet ``API-KEY``
+3. Path to the relevant package build version.
+
+
 
 
 
