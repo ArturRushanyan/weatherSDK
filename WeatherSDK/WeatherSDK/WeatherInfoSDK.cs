@@ -27,19 +27,19 @@ namespace WeatherSDK
         public SDKMode Mode => mode;
 
         public WeatherInfoSDK() 
-        {
+        {   
             httpClient = new HttpClient();
-            this.apiKey = "";
-            this.mode = SDKMode.OnDemend;
             weatherCachedData = new Dictionary<string, CachedWheatherData>();
+            apiKey = "";
+            mode = SDKMode.OnDemend;
         }
 
         private WeatherInfoSDK(string apiKey, SDKMode mode = SDKMode.OnDemend)
         {
             httpClient = new HttpClient();
+            weatherCachedData = new Dictionary<string, CachedWheatherData>();
             this.apiKey = apiKey;
             this.mode = mode;
-            weatherCachedData = new Dictionary<string, CachedWheatherData>();
         }
 
         public static WeatherInfoSDK CreateInstance(string apiKey, SDKMode mode = SDKMode.OnDemend)
@@ -48,6 +48,7 @@ namespace WeatherSDK
             {
                 throw new UnauthorizedExcpetion();
             }
+
             if (!instances.TryGetValue(apiKey, out var instance))
             {
                 instance = new WeatherInfoSDK(apiKey, mode);
@@ -72,7 +73,7 @@ namespace WeatherSDK
 
         public async Task<string> GetCityWeather(string city)
         {
-            CachedWheatherData cachedData;
+            CachedWheatherData? cachedData = null;
 
             if (weatherCachedData.TryGetValue(city, out cachedData))
             {
@@ -86,57 +87,59 @@ namespace WeatherSDK
 
             try
             {
+                WeatherApiResponse response = await FetchWeatherDataAsync(url);
 
-                //HttpResponseMessage response = await httpClient.GetAsync(url);
+                WeatherData weatherData = ConvertWeatherResponseToTargetJson(response);
 
-                WeatherApiResponse response = await FetchWeatherDataAndDeserializeAsync(url);
-
-
-                //if (response.IsSuccessStatusCode)
-                //{
-                    //string jsonResponse = await response.Content.ReadAsStringAsync();
-
-                    //WeatherApiResponse? weatherResponse = JsonConvert.DeserializeObject<WeatherApiResponse>(response);
-
-                    if (response == null)
+                if (cachedData != null)
+                {
+                    cachedData.LastUpdatedDate = DateTime.UtcNow;
+                    cachedData.Data = weatherData;
+                }
+                else
+                {
+                    if (weatherCachedData.Count >= cacheSize)
                     {
-                        throw new BaseWeatherSDKException($"Cannot process response data: {response}");
+                        weatherCachedData.Remove(weatherCachedData.Keys.Last());
                     }
+                    weatherCachedData.Add(city, new CachedWheatherData(DateTime.UtcNow, weatherData));
+                }
 
-                    WeatherData weatherData = ConvertWeatherResponseToTargetJson(response);
-
-                    if (cachedData != null)
-                    {
-                        cachedData.LastUpdatedDate = DateTime.UtcNow;
-                        cachedData.Data = weatherData;
-                    }
-                    else
-                    {
-                        if (weatherCachedData.Count >= cacheSize)
-                        {
-                            weatherCachedData.Remove(weatherCachedData.Keys.Last());
-                        }
-                        weatherCachedData.Add(city, new CachedWheatherData(DateTime.UtcNow, weatherData));
-                    }
-
-                    return SerializeWeatherData(weatherData);
-                //}
-                //else
-                //{
-                //    switch (response.StatusCode)
-                //    {
-                //        case HttpStatusCode.Unauthorized:
-                //            throw new UnauthorizedExcpetion();
-                //        case HttpStatusCode.NotFound:
-                //            throw new NotFoundExcpetion();
-                //        default:
-                //            throw new BaseWeatherSDKException($"Exception: {(int)response.StatusCode} - {response.ReasonPhrase}");
-                //    }
-                //}
+                return SerializeWeatherData(weatherData); 
             }
             catch (Exception ex)
             {
                 throw new BaseWeatherSDKException(ex.Message);
+            }
+        }
+
+        private async Task<WeatherApiResponse> FetchWeatherDataAsync(string url)
+        {
+            HttpResponseMessage response = await httpClient.GetAsync(url);
+            if (response.IsSuccessStatusCode)
+            {
+                string jsonResponse = await response.Content.ReadAsStringAsync();
+
+                WeatherApiResponse? weatherResponse = JsonConvert.DeserializeObject<WeatherApiResponse>(jsonResponse);
+
+                if (weatherResponse == null)
+                {
+                    throw new BaseWeatherSDKException($"Cannot process response data: {response}");
+                }
+
+                return weatherResponse;
+            }
+            else
+            {
+                switch (response.StatusCode)
+                {
+                    case HttpStatusCode.Unauthorized:
+                        throw new UnauthorizedExcpetion();
+                    case HttpStatusCode.NotFound:
+                        throw new NotFoundExcpetion();
+                    default:
+                        throw new BaseWeatherSDKException($"Exception: {(int)response.StatusCode} - {response.ReasonPhrase}");
+                }
             }
         }
 
@@ -202,29 +205,6 @@ namespace WeatherSDK
             });
         }
 
-        public virtual async Task<WeatherApiResponse> FetchWeatherDataAndDeserializeAsync(string url)
-        {
-            HttpResponseMessage response = await httpClient.GetAsync(url);
-            if (response.IsSuccessStatusCode)
-            {
-                string jsonResponse = await response.Content.ReadAsStringAsync();
 
-                WeatherApiResponse? weatherResponse = JsonConvert.DeserializeObject<WeatherApiResponse>(jsonResponse);
-
-                return weatherResponse;
-            }
-            else
-            {
-                switch (response.StatusCode)
-                {
-                    case HttpStatusCode.Unauthorized:
-                        throw new UnauthorizedExcpetion();
-                    case HttpStatusCode.NotFound:
-                        throw new NotFoundExcpetion();
-                    default:
-                        throw new BaseWeatherSDKException($"Exception: {(int)response.StatusCode} - {response.ReasonPhrase}");
-                }
-            }
-        }
     }
 }
