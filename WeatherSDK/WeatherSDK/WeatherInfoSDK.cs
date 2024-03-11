@@ -26,6 +26,14 @@ namespace WeatherSDK
 
         public SDKMode Mode => mode;
 
+        public WeatherInfoSDK() 
+        {
+            httpClient = new HttpClient();
+            this.apiKey = "";
+            this.mode = SDKMode.OnDemend;
+            weatherCachedData = new Dictionary<string, CachedWheatherData>();
+        }
+
         private WeatherInfoSDK(string apiKey, SDKMode mode = SDKMode.OnDemend)
         {
             httpClient = new HttpClient();
@@ -36,6 +44,10 @@ namespace WeatherSDK
 
         public static WeatherInfoSDK CreateInstance(string apiKey, SDKMode mode = SDKMode.OnDemend)
         {
+            if (string.IsNullOrEmpty(apiKey) )
+            {
+                throw new UnauthorizedExcpetion();
+            }
             if (!instances.TryGetValue(apiKey, out var instance))
             {
                 instance = new WeatherInfoSDK(apiKey, mode);
@@ -74,20 +86,24 @@ namespace WeatherSDK
 
             try
             {
-                HttpResponseMessage response = await httpClient.GetAsync(url);
 
-                if (response.IsSuccessStatusCode)
-                {
-                    string jsonResponse = await response.Content.ReadAsStringAsync();
+                //HttpResponseMessage response = await httpClient.GetAsync(url);
 
-                    WeatherApiResponse? weatherResponse = JsonConvert.DeserializeObject<WeatherApiResponse>(jsonResponse);
+                WeatherApiResponse response = await FetchWeatherDataAndDeserializeAsync(url);
 
-                    if (weatherResponse == null)
+
+                //if (response.IsSuccessStatusCode)
+                //{
+                    //string jsonResponse = await response.Content.ReadAsStringAsync();
+
+                    //WeatherApiResponse? weatherResponse = JsonConvert.DeserializeObject<WeatherApiResponse>(response);
+
+                    if (response == null)
                     {
-                        throw new BaseWeatherSDKException($"Cannot process response data: {jsonResponse}");
+                        throw new BaseWeatherSDKException($"Cannot process response data: {response}");
                     }
 
-                    WeatherData weatherData = ConvertWeatherResponseToTargetJson(weatherResponse);
+                    WeatherData weatherData = ConvertWeatherResponseToTargetJson(response);
 
                     if (cachedData != null)
                     {
@@ -104,19 +120,19 @@ namespace WeatherSDK
                     }
 
                     return SerializeWeatherData(weatherData);
-                }
-                else
-                {
-                    switch (response.StatusCode)
-                    {
-                        case HttpStatusCode.Unauthorized:
-                            throw new UnauthorizedExcpetion();
-                        case HttpStatusCode.NotFound:
-                            throw new NotFoundExcpetion();
-                        default:
-                            throw new BaseWeatherSDKException($"Exception: {(int)response.StatusCode} - {response.ReasonPhrase}");
-                    }
-                }
+                //}
+                //else
+                //{
+                //    switch (response.StatusCode)
+                //    {
+                //        case HttpStatusCode.Unauthorized:
+                //            throw new UnauthorizedExcpetion();
+                //        case HttpStatusCode.NotFound:
+                //            throw new NotFoundExcpetion();
+                //        default:
+                //            throw new BaseWeatherSDKException($"Exception: {(int)response.StatusCode} - {response.ReasonPhrase}");
+                //    }
+                //}
             }
             catch (Exception ex)
             {
@@ -135,13 +151,13 @@ namespace WeatherSDK
                 },
                 temperature = new TemperatureInfo
                 {
-                    temp = weatherApiResponse.main.temp,
-                    feels_like = weatherApiResponse.main.feels_like
+                    temp = Math.Round(weatherApiResponse.main.temp, 2),
+                    feels_like = Math.Round(weatherApiResponse.main.feels_like, 2)
                 },
                 visibility = weatherApiResponse.visibility,
                 wind = new WindInfo
                 {
-                    speed = weatherApiResponse.wind.speed
+                    speed = Math.Round(weatherApiResponse.wind.speed, 2)
                 },
                 datetime = weatherApiResponse.dt,
                 sys = new SysInfo
@@ -157,7 +173,7 @@ namespace WeatherSDK
         }
 
         private string SerializeWeatherData(WeatherData weatherData)
-        { 
+        {
             return JsonConvert.SerializeObject(weatherData);
         }
 
@@ -184,6 +200,31 @@ namespace WeatherSDK
                     }
                 }
             });
+        }
+
+        public virtual async Task<WeatherApiResponse> FetchWeatherDataAndDeserializeAsync(string url)
+        {
+            HttpResponseMessage response = await httpClient.GetAsync(url);
+            if (response.IsSuccessStatusCode)
+            {
+                string jsonResponse = await response.Content.ReadAsStringAsync();
+
+                WeatherApiResponse? weatherResponse = JsonConvert.DeserializeObject<WeatherApiResponse>(jsonResponse);
+
+                return weatherResponse;
+            }
+            else
+            {
+                switch (response.StatusCode)
+                {
+                    case HttpStatusCode.Unauthorized:
+                        throw new UnauthorizedExcpetion();
+                    case HttpStatusCode.NotFound:
+                        throw new NotFoundExcpetion();
+                    default:
+                        throw new BaseWeatherSDKException($"Exception: {(int)response.StatusCode} - {response.ReasonPhrase}");
+                }
+            }
         }
     }
 }
