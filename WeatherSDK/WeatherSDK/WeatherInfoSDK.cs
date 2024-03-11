@@ -44,7 +44,7 @@ namespace WeatherSDK
 
         public static WeatherInfoSDK CreateInstance(string apiKey, SDKMode mode = SDKMode.OnDemend)
         {
-            if (string.IsNullOrEmpty(apiKey) )
+            if (string.IsNullOrEmpty(apiKey))
             {
                 throw new UnauthorizedExcpetion();
             }
@@ -113,7 +113,7 @@ namespace WeatherSDK
             }
         }
 
-        private async Task<WeatherApiResponse> FetchWeatherDataAsync(string url)
+        public virtual async Task<WeatherApiResponse> FetchWeatherDataAsync(string url)
         {
             HttpResponseMessage response = await httpClient.GetAsync(url);
             if (response.IsSuccessStatusCode)
