@@ -1,7 +1,5 @@
-using Microsoft.VisualStudio.TestPlatform.TestHost;
 using Moq;
 using Newtonsoft.Json;
-using System.Net;
 using WeatherSDK.Data;
 using WeatherSDK.Exceptions;
 
@@ -64,7 +62,7 @@ namespace WeatherSDK.nUnitTest
 
             Mock<WeatherInfoSDK> instance = new Mock<WeatherInfoSDK>();
             instance.CallBase = true;
-            instance.Setup(x => x.FetchWeatherDataAsync(It.IsAny<string>())).ReturnsAsync(expectedWeatherResponseData);
+            instance.Setup(x => x.FetchWeatherDataAsync(It.IsAny<HttpClient>(), It.IsAny<string>())).ReturnsAsync(expectedWeatherResponseData);
 
             var result = instance.Object.GetCityWeather("London");
 

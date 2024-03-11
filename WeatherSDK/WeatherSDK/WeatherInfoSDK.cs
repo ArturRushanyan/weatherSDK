@@ -17,7 +17,7 @@ namespace WeatherSDK
         private static Dictionary<string, WeatherInfoSDK> instances = new Dictionary<string, WeatherInfoSDK>();
 
         private readonly int cacheSize = 10;
-        private readonly int cacheExpirationTimeInSeconds = 6;
+        private readonly int cacheExpirationTimeInSeconds = 600;
         private readonly HttpClient httpClient;
         private readonly string apiUrl = "https://api.openweathermap.org/data/2.5/weather?q={0}&appid={1}";
         private string apiKey;
@@ -73,6 +73,11 @@ namespace WeatherSDK
 
         public async Task<string> GetCityWeather(string city)
         {
+            if (string.IsNullOrEmpty(city)) 
+            { 
+                throw new NotFoundExcpetion();
+            }
+
             CachedWheatherData? cachedData = null;
 
             if (weatherCachedData.TryGetValue(city, out cachedData))
@@ -87,7 +92,7 @@ namespace WeatherSDK
 
             try
             {
-                WeatherApiResponse response = await FetchWeatherDataAsync(url);
+                WeatherApiResponse response = await FetchWeatherDataAsync(httpClient, url);
 
                 WeatherData weatherData = ConvertWeatherResponseToTargetJson(response);
 
@@ -113,7 +118,7 @@ namespace WeatherSDK
             }
         }
 
-        public virtual async Task<WeatherApiResponse> FetchWeatherDataAsync(string url)
+        public virtual async Task<WeatherApiResponse> FetchWeatherDataAsync(HttpClient httpClient, string url)
         {
             HttpResponseMessage response = await httpClient.GetAsync(url);
             if (response.IsSuccessStatusCode)
@@ -204,7 +209,5 @@ namespace WeatherSDK
                 }
             });
         }
-
-
     }
 }
