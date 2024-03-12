@@ -191,8 +191,8 @@ namespace WeatherSDK
             {
                 while (true)
                 {
-
-                    await Task.Delay(10000);
+                    int cacheDataUpdateDelayInMilliseconds = 600000;
+                    await Task.Delay(cacheDataUpdateDelayInMilliseconds);
                     List<WeatherInfoSDK> apiKeys = instances.Values.ToList();
 
                     foreach (WeatherInfoSDK instance in apiKeys)

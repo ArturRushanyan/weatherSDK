@@ -139,6 +139,11 @@ To upload a new version of a package, please run the ".\push_package_to_nuget.ps
 2. NuGet ``API-KEY``
 3. Path to the relevant package build version.
 
+> [!NOTE]  
+>
+> In path parameter don't need to mention build file
+> **example:** ``WeatherSDK\WeatherSDK\bin\Debug``
+
 
 
 
